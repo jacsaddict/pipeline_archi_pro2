@@ -66,8 +66,8 @@ int  main()
 {
   FILE *iimage = fopen("iimage.bin","rb");
   FILE *dimage = fopen("dimage.bin","rb");
-  FILE *error = fopen("error_dump.rpt","w");
-  FILE *snapshot = fopen("snapshot.rpt","w");
+  FILE *error = fopen("error_dump2.rpt","w");
+  FILE *snapshot = fopen("snapshot2.rpt","w");
 
   int reg[32] = {0};
   int reg_pre[32] = {0};
@@ -800,9 +800,9 @@ int  main()
     int m_to_be_fwd_EX_rt = 0;
     int MUX_ID_EX_rs = ID_EX[rs_pipel[2]];
     int MUX_ID_EX_rt = ID_EX[rt_pipel[2]];
-    printf(" %d", rt_pipel[3]);
-    printf(" %d", rs_pipel[2]);
-    printf(" %d\n", rt_pipel[2]);
+    // printf(" %d", rt_pipel[3]);
+    // printf(" %d", rs_pipel[2]);
+    // printf(" %d\n", rt_pipel[2]);
     if((rt_pipel[4]!=0&&rs_pipel[2]==rt_pipel[4]&&opcode_pipel[4]!=0x00)&&opcode_pipel[2]!=0x3F)
     {
       m_to_be_fwd_EX_rs = rt_pipel[4];
@@ -1178,7 +1178,7 @@ int  main()
     //index remember! to check
 
     ////////////////////////////////////////////////////////////////////////////////////////////////
-    //ID
+    //stage_ID
     //R-type
     unsigned int opcode = 0;
     unsigned int rs = 0;
@@ -1469,28 +1469,31 @@ int  main()
           if(computing_instruction)
             stall_ID = 1;
           strcpy(ID_inst,"BEQ");
-          if(rs_pipel[1]==rd_pipel[3]&&rt_pipel[1]==rd_pipel[3])
+          if(!stall_ID&&rs_pipel[1]==rd_pipel[3]&&rt_pipel[1]==rd_pipel[3])
           {
             to_be_fwd_ID_rs = rd_pipel[3];
             to_be_fwd_ID_rt = rd_pipel[3];
             pc_adjust = 4*immediate_pipel[1];  //sure to be eq.
+            _flush =  1;
             break;
           }
-          if(rs_pipel[1]==rd_pipel[3])
+          if(!stall_ID&&rs_pipel[1]==rd_pipel[3])
           {
             to_be_fwd_ID_rs = rd_pipel[3];
             if(reg[rt_pipel[1]] == EX_DM[rd_pipel[3]])
             {
               pc_adjust = 4*immediate_pipel[1];
+              _flush =  1;
             }
             break;
           }
-          if(rt_pipel[1]==rd_pipel[3])
+          if(!stall_ID&&rt_pipel[1]==rd_pipel[3])
           {
             to_be_fwd_ID_rt = rd_pipel[3];
             if(reg[rs_pipel[1]] == EX_DM[rd_pipel[3]])
             {
               pc_adjust = 4*immediate_pipel[1];
+              _flush =  1;
             }
             break;
           }
@@ -1510,28 +1513,30 @@ int  main()
             (computing_instruction==2&&rs_pipel[1]==rt_pipel[2])||(computing_instruction==2&&rt_pipel[1]==rt_pipel[2]))
              stall_ID = 1;
           strcpy(ID_inst,"BNE");
-          if(rs_pipel[1]==rd_pipel[3]&&rt_pipel[1]==rd_pipel[3])
+          if(!stall_ID&&rs_pipel[1]==rd_pipel[3]&&rt_pipel[1]==rd_pipel[3])
           {
             to_be_fwd_ID_rs = rd_pipel[3];
             to_be_fwd_ID_rt = rd_pipel[3];
             //sure to be eq.
             break;
           }
-          if(rs_pipel[1]==rd_pipel[3])
+          if(!stall_ID&&rs_pipel[1]==rd_pipel[3])
           {
             to_be_fwd_ID_rs = rd_pipel[3];
             if(reg[rt_pipel[1]] != EX_DM[rd_pipel[3]])
             {
               pc_adjust = 4*immediate_pipel[1];
+              _flush =  1;
             }
             break;
           }
-          if(rt_pipel[1]==rd_pipel[3])
+          if(!stall_ID&&rt_pipel[1]==rd_pipel[3])
           {
             to_be_fwd_ID_rt = rd_pipel[3];
             if(reg[rs_pipel[1]] != EX_DM[rd_pipel[3]])
             {
               pc_adjust = 4*immediate_pipel[1];
+              _flush =  1;
             }
             break;
           }
@@ -1550,12 +1555,13 @@ int  main()
           if(computing_instruction)
              stall_ID = 1;
           strcpy(ID_inst,"BGTZ");
-          if(rs_pipel[1]==rd_pipel[3])
+          if(!stall_ID&&rs_pipel[1]==rd_pipel[3])
           {
             to_be_fwd_ID_rs = rd_pipel[3];
             if(EX_DM[rd_pipel[3]]>0)
             {
               pc_adjust = 4*immediate_pipel[1];
+              _flush =  1;
             }
             break;
           }
@@ -1574,10 +1580,10 @@ int  main()
         {//j
           strcpy(ID_inst,"J");
           address_pipel[1]<<=2;
-          pc += 4;
-          pc = (unsigned)pc>>28;
-          pc<<=28;
-          pc = (unsigned)pc|address_pipel[1];
+          pc_adjust = pc + 4;
+          pc_adjust = (unsigned)pc_adjust>>28;
+          pc_adjust<<=28;
+          pc_adjust = (unsigned)pc_adjust|address_pipel[1];
           J_Type = 1;
           _flush = 1;
           break;
@@ -1585,11 +1591,11 @@ int  main()
         case 0x03:
         {//jal
           strcpy(ID_inst,"JAL");
-          pc+=4;
+          pc_adjust = pc + 4;
           address_pipel[1] = address_pipel[1] << 2;
-          pc = (unsigned)pc>>28;
-          pc<<=28;
-          pc = (unsigned)pc|address;
+          pc_adjust = (unsigned)pc_adjust>>28;
+          pc_adjust<<=28;
+          pc_adjust = (unsigned)pc_adjust|address;
           J_Type = 1;
           _flush = 1;
           break;
@@ -1665,7 +1671,7 @@ int  main()
     }
 
     ////////////////////////////////////////////////////////////////////////////////////////////////
-    //IF
+    //stage_IF
     unsigned int instruction = instruction_decode(_iimage[i],_iimage[i+1],_iimage[i+2],_iimage[i+3]);
     if(!stall_ID)
     {
@@ -1750,9 +1756,9 @@ int  main()
     cycle++;
 
     if(!J_Type&&!stall_IF&&!_flush)       pc+=4;
-    pc+= pc_adjust;
+    if(!J_Type) pc+= pc_adjust;
+    if(J_Type)                      {J_Type = 0; pc = pc_adjust;}
     pc_adjust = 0;
-    if(J_Type)                       J_Type = 0;
     if(stall_IF)                    {stall_ID = 0; stall_IF = 0;}
     if(_flush)                      {_flush   = 0;}
     to_be_fwd_ID_rs = 0;
