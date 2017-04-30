@@ -16,6 +16,7 @@ int DM_WB[32];
 
 int EX_DM_M_index;
 int DM_WB_M;
+int computing_instruction_in_DM = 0;
 
 int halt_counting;
 
@@ -462,7 +463,6 @@ int  main()
         case 0x03:
         {//jal
           strcpy(WB_inst,"JAL");
-          reg[31] = DM_WB[31];
           break;
         }
       }
@@ -472,6 +472,7 @@ int  main()
     ////////////////////////////////////////////////////////////////////////////////////////////////
     //stage_DM
     //TODO data_misaligned memory_address_overflow
+
     if(instruction_pipel[3]!=0){
         switch (opcode_pipel[3]) {
           //S-type
@@ -803,11 +804,17 @@ int  main()
     // printf(" %d", rt_pipel[3]);
     // printf(" %d", rs_pipel[2]);
     // printf(" %d\n", rt_pipel[2]);
+    if((rd_pipel[4]!=0&&rs_pipel[2]==rd_pipel[4]&&opcode_pipel[4]==0x00)&&opcode_pipel[2]!=0x3F)
+    {
+      m_to_be_fwd_EX_rs = rd_pipel[4];
+      MUX_ID_EX_rs = DM_WB[rd_pipel[4]];
+    }
     if((rt_pipel[4]!=0&&rs_pipel[2]==rt_pipel[4]&&opcode_pipel[4]!=0x00)&&opcode_pipel[2]!=0x3F)
     {
       m_to_be_fwd_EX_rs = rt_pipel[4];
       MUX_ID_EX_rs = DM_WB[rt_pipel[4]];
     }
+
     if((rd_pipel[3]!=0&&rs_pipel[2]==rd_pipel[3]&&opcode_pipel[3]==0x00)&&opcode_pipel[2]!=0x3F)
     {
       m_to_be_fwd_EX_rs = 0;
@@ -820,6 +827,12 @@ int  main()
       to_be_fwd_EX_rs = rt_pipel[3];
       MUX_ID_EX_rs = EX_DM[rt_pipel[3]];
     }//TODO:::::::::::　else if  DM to EX
+
+    if((rd_pipel[4]!=0&&rt_pipel[2]==rd_pipel[4]&&opcode_pipel[4]==0x00)&&opcode_pipel[2]!=0x3F)
+    {
+      m_to_be_fwd_EX_rt = rd_pipel[4];
+      MUX_ID_EX_rt = DM_WB[rd_pipel[4]];
+    }
     if((rt_pipel[4]!=0&&rt_pipel[2]==rt_pipel[4]&&opcode_pipel[4]!=0x00)&&opcode_pipel[2]!=0x3F)
     {
       m_to_be_fwd_EX_rt = rt_pipel[4];
@@ -877,7 +890,7 @@ int  main()
               strcpy(EX_inst,"SUB");
               int tmp1 = MUX_ID_EX_rs;
               int tmp2 = -MUX_ID_EX_rt;
-              ID_EX[rd_pipel[2]] = MUX_ID_EX_rs + MUX_ID_EX_rt;
+              ID_EX[rd_pipel[2]] = MUX_ID_EX_rs - MUX_ID_EX_rt;
 
               if((tmp1>0&&tmp2>0&&EX_DM[rd_pipel[2]]<=0)||(tmp1<0&&tmp2<0&&EX_DM[rd_pipel[2]]>=0))
                 overflow = 1;
@@ -936,7 +949,8 @@ int  main()
             {//sll TODO change!!
               strcpy(EX_inst,"SLL");
               ID_EX[rd_pipel[2]] = MUX_ID_EX_rt<<shamt_pipel[2];
-
+              to_be_fwd_EX_rs = 0;
+              m_to_be_fwd_EX_rs = 0;
               computing_instruction = 1;
               break;
             }
@@ -944,21 +958,25 @@ int  main()
             {//srl
               strcpy(EX_inst,"SRL");
               ID_EX[rd_pipel[2]] = (unsigned)MUX_ID_EX_rt>>shamt_pipel[2];
-
+              to_be_fwd_EX_rs = 0;
+              m_to_be_fwd_EX_rs = 0;
               computing_instruction = 1;
               break;
             }
             case 0x03:
             {//sra
-              strcpy(EX_inst,"SRL");
+              strcpy(EX_inst,"SRA");
               ID_EX[rd_pipel[2]] = MUX_ID_EX_rt>>shamt_pipel[2];
-
+              to_be_fwd_EX_rs = 0;
+              m_to_be_fwd_EX_rs = 0;
               computing_instruction = 1;
               break;
             }
             case 0x08:
             {//jr
               strcpy(EX_inst,"JR");
+              to_be_fwd_EX_rt = 0;
+              m_to_be_fwd_EX_rt = 0;
               break;
             }
             case 0x18:
@@ -998,7 +1016,10 @@ int  main()
             {//mfhi
               strcpy(EX_inst,"MFHI");
               ID_EX[rd_pipel[2]] = HI;
-
+              to_be_fwd_EX_rs = 0;
+              m_to_be_fwd_EX_rs = 0;
+              to_be_fwd_EX_rt = 0;
+              m_to_be_fwd_EX_rt = 0;
               computing_instruction = 1;
               no_load_with_hi_lo = 0;
               break;
@@ -1007,7 +1028,10 @@ int  main()
             {//mflo
               strcpy(EX_inst,"MFLO");
               ID_EX[rd_pipel[2]] = LO;
-
+              to_be_fwd_EX_rs = 0;
+              m_to_be_fwd_EX_rs = 0;
+              to_be_fwd_EX_rt = 0;
+              m_to_be_fwd_EX_rt = 0;
               computing_instruction = 1;
               no_load_with_hi_lo = 0;
               break;
@@ -1022,7 +1046,8 @@ int  main()
           ID_EX[rt_pipel[2]] = MUX_ID_EX_rs + (int)immediate_pipel[2];
           if((tmp1>=0&&immediate_pipel[2]>=0&&ID_EX[rt_pipel[2]]<0)||(tmp1<0&&immediate_pipel[2]&&ID_EX[rt_pipel[2]]>=0))
             overflow = 1;
-
+          to_be_fwd_EX_rt = 0;
+          m_to_be_fwd_EX_rt = 0;
           computing_instruction = 2;
           break;
         }
@@ -1030,22 +1055,28 @@ int  main()
         {//addiu
           strcpy(EX_inst,"ADDIU");
           ID_EX[rt_pipel[2]] = MUX_ID_EX_rs + (int)immediate_pipel[2];
-
+          to_be_fwd_EX_rt = 0;
+          m_to_be_fwd_EX_rt = 0;
           computing_instruction = 2;
           break;
         }
         case 0x23:
         {//lw
           strcpy(EX_inst,"LW");
+          to_be_fwd_EX_rt = 0;
+          m_to_be_fwd_EX_rt = 0;
           int index = MUX_ID_EX_rs + immediate_pipel[2];
           if((MUX_ID_EX_rs>0&&immediate_pipel[2]>0&&index<=0)||(MUX_ID_EX_rs<0&&immediate_pipel[2]<0&&index>=0))
             overflow = 1;
+
           EX_DM_M_index = index;
           break;
         }
         case 0x21:
         {//lh
           strcpy(EX_inst,"LH");
+          to_be_fwd_EX_rt = 0;
+          m_to_be_fwd_EX_rt = 0;
           int index = MUX_ID_EX_rs + immediate_pipel[2];
           if((MUX_ID_EX_rs>0&&immediate_pipel[2]>0&&index<=0)||(MUX_ID_EX_rs<0&&immediate_pipel[2]<0&&index>=0))
             overflow = 1;
@@ -1055,6 +1086,8 @@ int  main()
         case 0x25:
         {//lhu
           strcpy(EX_inst,"LHU");
+          to_be_fwd_EX_rt = 0;
+          m_to_be_fwd_EX_rt = 0;
           int index = MUX_ID_EX_rs + immediate_pipel[2];
           if((MUX_ID_EX_rs>0&&immediate_pipel[2]>0&&index<=0)||(MUX_ID_EX_rs<0&&immediate_pipel[2]<0&&index>=0))
             overflow = 1;
@@ -1064,6 +1097,8 @@ int  main()
         case 0x20:
         {//lb
           strcpy(EX_inst,"LB");
+          to_be_fwd_EX_rt = 0;
+          m_to_be_fwd_EX_rt = 0;
           int index = MUX_ID_EX_rs + immediate_pipel[2];
           if((MUX_ID_EX_rs>0&&immediate_pipel[2]>0&&index<=0)||(MUX_ID_EX_rs<0&&immediate_pipel[2]<0&&index>=0))
             overflow = 1;
@@ -1073,6 +1108,8 @@ int  main()
         case 0x24:
         {//lbu
           strcpy(EX_inst,"LBU");
+          to_be_fwd_EX_rt = 0;
+          m_to_be_fwd_EX_rt = 0;
           int index = MUX_ID_EX_rs + immediate_pipel[2];
           if((MUX_ID_EX_rs>0&&immediate_pipel[2]>0&&index<=0)||(MUX_ID_EX_rs<0&&immediate_pipel[2]<0&&index>=0))
             overflow = 1;
@@ -1082,6 +1119,8 @@ int  main()
         case 0x2B:
         {//sw
           strcpy(EX_inst,"SW");
+          to_be_fwd_EX_rt = 0;
+          m_to_be_fwd_EX_rt = 0;
           int index = MUX_ID_EX_rs + immediate_pipel[2];
           if((MUX_ID_EX_rs>0&&immediate_pipel[2]>0&&index<=0)||(MUX_ID_EX_rs<0&&immediate_pipel[2]<0&&index>=0))
             overflow = 1;
@@ -1091,6 +1130,8 @@ int  main()
         case 0x29:
         {//sh
           strcpy(EX_inst,"SH");
+          to_be_fwd_EX_rt = 0;
+          m_to_be_fwd_EX_rt = 0;
           int index = MUX_ID_EX_rs + immediate_pipel[2];
           if((MUX_ID_EX_rs>0&&immediate_pipel[2]>0&&index<=0)||(MUX_ID_EX_rs<0&&immediate_pipel[2]<0&&index>=0))
             overflow = 1;
@@ -1100,6 +1141,8 @@ int  main()
         case 0x28:
         {//sb
           strcpy(EX_inst,"SB");
+          to_be_fwd_EX_rt = 0;
+          m_to_be_fwd_EX_rt = 0;
           int index = MUX_ID_EX_rs + immediate_pipel[2];
           if((MUX_ID_EX_rs>0&&immediate_pipel[2]>0&&index<=0)||(MUX_ID_EX_rs<0&&immediate_pipel[2]<0&&index>=0))
             overflow = 1;
@@ -1109,6 +1152,10 @@ int  main()
         case 0x0F:
         {//lui
           strcpy(EX_inst,"LUI");
+          to_be_fwd_EX_rt = 0;
+          m_to_be_fwd_EX_rt = 0;
+          to_be_fwd_EX_rs = 0;
+          m_to_be_fwd_EX_rs = 0;
           ID_EX[rt_pipel[2]] = immediate_pipel[2]<<16;
           computing_instruction = 2;
           break;
@@ -1116,6 +1163,8 @@ int  main()
         case 0x0C:
         {//andi
           strcpy(EX_inst,"ANDI");
+          to_be_fwd_EX_rt = 0;
+          m_to_be_fwd_EX_rt = 0;
           ID_EX[rt_pipel[2]] = MUX_ID_EX_rs&unsigned_immediate_pipel[2];
           computing_instruction = 2;
           break;
@@ -1123,6 +1172,8 @@ int  main()
         case 0x0D:
         {//ori
           strcpy(EX_inst,"ORI");
+          to_be_fwd_EX_rt = 0;
+          m_to_be_fwd_EX_rt = 0;
           ID_EX[rt_pipel[2]] = MUX_ID_EX_rs|unsigned_immediate_pipel[2];
           computing_instruction = 2;
           break;
@@ -1130,6 +1181,8 @@ int  main()
         case 0x0E:
         {//nori
           strcpy(EX_inst,"NORI");
+          to_be_fwd_EX_rt = 0;
+          m_to_be_fwd_EX_rt = 0;
           ID_EX[rt_pipel[2]] = ~(MUX_ID_EX_rs|unsigned_immediate_pipel[2]);
           computing_instruction = 2;
           break;
@@ -1137,33 +1190,55 @@ int  main()
         case 0x0A:
         {//slti
           strcpy(EX_inst,"SLTI");
+          to_be_fwd_EX_rt = 0;
+          m_to_be_fwd_EX_rt = 0;
           ID_EX[rt_pipel[2]] = (MUX_ID_EX_rs<unsigned_immediate_pipel[2]);
           computing_instruction = 2;
           break;
         }
         case 0x04:
         {//beq
+          to_be_fwd_EX_rt = 0;
+          m_to_be_fwd_EX_rt = 0;
+          to_be_fwd_EX_rs = 0;
+          m_to_be_fwd_EX_rs = 0;
           strcpy(EX_inst,"BEQ");
           break;
         }
         case 0x05:
         {//bne
+          to_be_fwd_EX_rt = 0;
+          m_to_be_fwd_EX_rt = 0;
+          to_be_fwd_EX_rs = 0;
+          m_to_be_fwd_EX_rs = 0;
           strcpy(EX_inst,"BNE");
           break;
         }
         case 0x07:
         {//bgtz
+          to_be_fwd_EX_rt = 0;
+          m_to_be_fwd_EX_rt = 0;
+          to_be_fwd_EX_rs = 0;
+          m_to_be_fwd_EX_rs = 0;
           strcpy(EX_inst,"BGTZ");
           break;
         }
         //J-type
         case 0x02:
         {//j
+          to_be_fwd_EX_rt = 0;
+          m_to_be_fwd_EX_rt = 0;
+          to_be_fwd_EX_rs = 0;
+          m_to_be_fwd_EX_rs = 0;
           strcpy(EX_inst,"J");
           break;
         }
         case 0x03:
         {//jal
+          to_be_fwd_EX_rt = 0;
+          m_to_be_fwd_EX_rt = 0;
+          to_be_fwd_EX_rs = 0;
+          m_to_be_fwd_EX_rs = 0;
           strcpy(EX_inst,"JAL");
           ID_EX[31] = pc + 4;
           break;
@@ -1466,10 +1541,12 @@ int  main()
           if((EX_inst[0]=='L'&&(rs_pipel[1]==rt_pipel[2]||rt_pipel[1]==rt_pipel[2]))||
              (DM_inst[0]=='L'&&(rs_pipel[1]==rt_pipel[3]||rt_pipel[1]==rt_pipel[3])))
              stall_ID = 1;
-          if(computing_instruction)
+          if((computing_instruction==1&&rs_pipel[1]==rd_pipel[2])||(computing_instruction==1&&rt_pipel[1]==rd_pipel[2])||
+             (computing_instruction==2&&rs_pipel[1]==rt_pipel[2])||(computing_instruction==2&&rt_pipel[1]==rt_pipel[2]))
             stall_ID = 1;
           strcpy(ID_inst,"BEQ");
-          if(!stall_ID&&rs_pipel[1]==rd_pipel[3]&&rt_pipel[1]==rd_pipel[3])
+          if(!stall_ID&&((computing_instruction_in_DM==1&&rs_pipel[1]==rd_pipel[3]&&rt_pipel[1]==rd_pipel[3])||
+                         (computing_instruction_in_DM==2&&rs_pipel[1]==rt_pipel[3]&&rt_pipel[1]==rt_pipel[3])))
           {
             to_be_fwd_ID_rs = rd_pipel[3];
             to_be_fwd_ID_rt = rd_pipel[3];
@@ -1477,7 +1554,8 @@ int  main()
             _flush =  1;
             break;
           }
-          if(!stall_ID&&rs_pipel[1]==rd_pipel[3])
+          if(!stall_ID&&((computing_instruction_in_DM==1&&rs_pipel[1]==rd_pipel[3])||
+                         (computing_instruction_in_DM==2&&rs_pipel[1]==rt_pipel[3])))
           {
             to_be_fwd_ID_rs = rd_pipel[3];
             if(reg[rt_pipel[1]] == EX_DM[rd_pipel[3]])
@@ -1487,7 +1565,8 @@ int  main()
             }
             break;
           }
-          if(!stall_ID&&rt_pipel[1]==rd_pipel[3])
+          if(!stall_ID&&((computing_instruction_in_DM==1&&rt_pipel[1]==rd_pipel[3])||
+                         (computing_instruction_in_DM==2&&rt_pipel[1]==rt_pipel[3])))
           {
             to_be_fwd_ID_rt = rd_pipel[3];
             if(reg[rs_pipel[1]] == EX_DM[rd_pipel[3]])
@@ -1513,14 +1592,16 @@ int  main()
             (computing_instruction==2&&rs_pipel[1]==rt_pipel[2])||(computing_instruction==2&&rt_pipel[1]==rt_pipel[2]))
              stall_ID = 1;
           strcpy(ID_inst,"BNE");
-          if(!stall_ID&&rs_pipel[1]==rd_pipel[3]&&rt_pipel[1]==rd_pipel[3])
+          if(!stall_ID&&((computing_instruction_in_DM==1&&rs_pipel[1]==rd_pipel[3]&&rt_pipel[1]==rd_pipel[3])||
+                         (computing_instruction_in_DM==2&&rs_pipel[1]==rt_pipel[3]&&rt_pipel[1]==rt_pipel[3])))
           {
             to_be_fwd_ID_rs = rd_pipel[3];
             to_be_fwd_ID_rt = rd_pipel[3];
             //sure to be eq.
             break;
           }
-          if(!stall_ID&&rs_pipel[1]==rd_pipel[3])
+          if(!stall_ID&&((computing_instruction_in_DM==1&&rs_pipel[1]==rd_pipel[3])||
+                         (computing_instruction_in_DM==2&&rs_pipel[1]==rt_pipel[3])))
           {
             to_be_fwd_ID_rs = rd_pipel[3];
             if(reg[rt_pipel[1]] != EX_DM[rd_pipel[3]])
@@ -1530,7 +1611,8 @@ int  main()
             }
             break;
           }
-          if(!stall_ID&&rt_pipel[1]==rd_pipel[3])
+          if(!stall_ID&&((computing_instruction_in_DM==1&&rt_pipel[1]==rd_pipel[3])||
+                         (computing_instruction_in_DM==2&&rt_pipel[1]==rt_pipel[3])))
           {
             to_be_fwd_ID_rt = rd_pipel[3];
             if(reg[rs_pipel[1]] != EX_DM[rd_pipel[3]])
@@ -1552,10 +1634,12 @@ int  main()
           if((EX_inst[0]=='L'&&(rs_pipel[1]==rt_pipel[2]))||
              (DM_inst[0]=='L'&&(rs_pipel[1]==rt_pipel[3])))
              stall_ID = 1;
-          if(computing_instruction)
+             if((computing_instruction==1&&rs_pipel[1]==rd_pipel[2])||
+                (computing_instruction==2&&rs_pipel[1]==rt_pipel[2]))
              stall_ID = 1;
           strcpy(ID_inst,"BGTZ");
-          if(!stall_ID&&rs_pipel[1]==rd_pipel[3])
+          if(!stall_ID&&((computing_instruction_in_DM==1&&rs_pipel[1]==rd_pipel[3])||
+                         (computing_instruction_in_DM==2&&rs_pipel[1]==rt_pipel[3])))
           {
             to_be_fwd_ID_rs = rd_pipel[3];
             if(EX_DM[rd_pipel[3]]>0)
@@ -1591,11 +1675,12 @@ int  main()
         case 0x03:
         {//jal
           strcpy(ID_inst,"JAL");
+          reg[31] = pc + 4;
           pc_adjust = pc + 4;
           address_pipel[1] = address_pipel[1] << 2;
           pc_adjust = (unsigned)pc_adjust>>28;
           pc_adjust<<=28;
-          pc_adjust = (unsigned)pc_adjust|address;
+          pc_adjust = (unsigned)pc_adjust|address_pipel[1];
           J_Type = 1;
           _flush = 1;
           break;
@@ -1633,6 +1718,7 @@ int  main()
     unsigned_immediate_pipel[3] = unsigned_immediate_pipel[2];
     address_pipel[3] = address_pipel[2];
 
+    computing_instruction_in_DM = computing_instruction;
     for(int j=0;j<32;j++)
     {
       EX_DM[j] = ID_EX[j];
