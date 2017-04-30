@@ -1019,8 +1019,8 @@ int  main()
         {//addi
           strcpy(EX_inst,"ADDI");
           int tmp1 = MUX_ID_EX_rs;
-          MUX_ID_EX_rt = MUX_ID_EX_rs + (int)immediate_pipel[2];
-          if((tmp1>=0&&immediate_pipel[2]>=0&&MUX_ID_EX_rt<0)||(tmp1<0&&immediate_pipel[2]&&MUX_ID_EX_rt>=0))
+          ID_EX[rt_pipel[2]] = MUX_ID_EX_rs + (int)immediate_pipel[2];
+          if((tmp1>=0&&immediate_pipel[2]>=0&&ID_EX[rt_pipel[2]]<0)||(tmp1<0&&immediate_pipel[2]&&ID_EX[rt_pipel[2]]>=0))
             overflow = 1;
 
           computing_instruction = 2;
@@ -1029,7 +1029,7 @@ int  main()
         case 0x09:
         {//addiu
           strcpy(EX_inst,"ADDIU");
-          MUX_ID_EX_rt = MUX_ID_EX_rs + (int)immediate_pipel[2];
+          ID_EX[rt_pipel[2]] = MUX_ID_EX_rs + (int)immediate_pipel[2];
 
           computing_instruction = 2;
           break;
@@ -1109,35 +1109,35 @@ int  main()
         case 0x0F:
         {//lui
           strcpy(EX_inst,"LUI");
-          MUX_ID_EX_rt = immediate_pipel[2]<<16;
+          ID_EX[rt_pipel[2]] = immediate_pipel[2]<<16;
           computing_instruction = 2;
           break;
         }
         case 0x0C:
         {//andi
           strcpy(EX_inst,"ANDI");
-          MUX_ID_EX_rt = MUX_ID_EX_rs&unsigned_immediate_pipel[2];
+          ID_EX[rt_pipel[2]] = MUX_ID_EX_rs&unsigned_immediate_pipel[2];
           computing_instruction = 2;
           break;
         }
         case 0x0D:
         {//ori
           strcpy(EX_inst,"ORI");
-          MUX_ID_EX_rt = MUX_ID_EX_rs|unsigned_immediate_pipel[2];
+          ID_EX[rt_pipel[2]] = MUX_ID_EX_rs|unsigned_immediate_pipel[2];
           computing_instruction = 2;
           break;
         }
         case 0x0E:
         {//nori
           strcpy(EX_inst,"NORI");
-          MUX_ID_EX_rt = ~(MUX_ID_EX_rs|unsigned_immediate_pipel[2]);
+          ID_EX[rt_pipel[2]] = ~(MUX_ID_EX_rs|unsigned_immediate_pipel[2]);
           computing_instruction = 2;
           break;
         }
         case 0x0A:
         {//slti
           strcpy(EX_inst,"SLTI");
-          MUX_ID_EX_rt = (MUX_ID_EX_rs<unsigned_immediate_pipel[2]);
+          ID_EX[rt_pipel[2]] = (MUX_ID_EX_rs<unsigned_immediate_pipel[2]);
           computing_instruction = 2;
           break;
         }
