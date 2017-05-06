@@ -819,7 +819,11 @@ int  main()
       m_to_be_fwd_EX_rs = rt_pipel[4];
       MUX_ID_EX_rs = DM_WB[rt_pipel[4]];
     }
-
+    if(!strcmp(WB_inst,"JAL")&&rs_pipel[2]==31)
+    {
+      m_to_be_fwd_EX_rs = 31;
+      MUX_ID_EX_rs = DM_WB[31];
+    }
     if((rd_pipel[3]!=0&&rs_pipel[2]==rd_pipel[3]&&computing_instruction_in_DM==1))
     {
       m_to_be_fwd_EX_rs = 0;
@@ -831,7 +835,14 @@ int  main()
       m_to_be_fwd_EX_rs = 0;
       to_be_fwd_EX_rs = rt_pipel[3];
       MUX_ID_EX_rs = EX_DM[rt_pipel[3]];
-    }//TODO:::::::::::　else if  DM to EX
+    }
+    if(!strcmp(DM_inst,"JAL")&&rs_pipel[2]==31)
+    {
+      m_to_be_fwd_EX_rs = 0;
+      to_be_fwd_EX_rs = 31;
+      MUX_ID_EX_rs = EX_DM[31];
+    }
+    //TODO:::::::::::　else if  DM to EX
 
     if((rd_pipel[4]!=0&&rt_pipel[2]==rd_pipel[4]&&computing_instruction_in_WB==1))
     {
@@ -842,6 +853,11 @@ int  main()
     {
       m_to_be_fwd_EX_rt = rt_pipel[4];
       MUX_ID_EX_rt = DM_WB[rt_pipel[4]];
+    }
+    if(!strcmp(WB_inst,"JAL")&&rt_pipel[2]==31)
+    {
+      m_to_be_fwd_EX_rt = 31;
+      MUX_ID_EX_rt = DM_WB[31];
     }
     if((rd_pipel[3]!=0&&rt_pipel[2]==rd_pipel[3]&&computing_instruction_in_DM==1))
     {
@@ -854,6 +870,12 @@ int  main()
       m_to_be_fwd_EX_rt = 0;
       to_be_fwd_EX_rt = rt_pipel[3];
       MUX_ID_EX_rt = EX_DM[rt_pipel[3]];
+    }
+    if(!strcmp(DM_inst,"JAL")&&rt_pipel[2]==31)
+    {
+      m_to_be_fwd_EX_rt = 0;
+      to_be_fwd_EX_rt = 31;
+      MUX_ID_EX_rt = EX_DM[31];
     }//TODO:::::::::::　else if  DM to EX
     int computing_instruction = 0;
     if(instruction_pipel[2]!=0)
@@ -881,14 +903,14 @@ int  main()
               int tmp2 = MUX_ID_EX_rt;
               ID_EX[rd_pipel[2]] = MUX_ID_EX_rs + MUX_ID_EX_rt;
 
-              if((tmp1>0&&tmp2>0&&EX_DM[rd_pipel[2]]<=0)||(tmp1<0&&tmp2<0&&EX_DM[rd_pipel[2]]>=0))
+              if((tmp1>0&&tmp2>0&&ID_EX[rd_pipel[2]]<=0)||(tmp1<0&&tmp2<0&&ID_EX[rd_pipel[2]]>=0))
                 overflow = 1;
               computing_instruction = 1;
               break;
             }
             case 0x21:
             {//addu
-              strcpy(EX_inst,"ADDI");
+              strcpy(EX_inst,"ADDU");
                 ID_EX[rd_pipel[2]] = MUX_ID_EX_rs + MUX_ID_EX_rt;
 
                 computing_instruction = 1;
@@ -901,7 +923,7 @@ int  main()
               int tmp2 = -MUX_ID_EX_rt;
               ID_EX[rd_pipel[2]] = MUX_ID_EX_rs - MUX_ID_EX_rt;
 
-              if((tmp1>0&&tmp2>0&&EX_DM[rd_pipel[2]]<=0)||(tmp1<0&&tmp2<0&&EX_DM[rd_pipel[2]]>=0))
+              if((tmp1>0&&tmp2>0&&ID_EX[rd_pipel[2]]<0)||(tmp1<0&&tmp2<0&&ID_EX[rd_pipel[2]]>=0))
                 overflow = 1;
               computing_instruction = 1;
               break;
@@ -932,7 +954,7 @@ int  main()
             }
             case 0x27:
             {//nor
-              strcpy(EX_inst,"XOR");
+              strcpy(EX_inst,"NOR");
               ID_EX[rd_pipel[2]] =~(MUX_ID_EX_rs | MUX_ID_EX_rt);
 
               computing_instruction = 1;
@@ -984,6 +1006,8 @@ int  main()
             case 0x08:
             {//jr
               strcpy(EX_inst,"JR");
+              to_be_fwd_EX_rs = 0;
+              m_to_be_fwd_EX_rs = 0;
               to_be_fwd_EX_rt = 0;
               m_to_be_fwd_EX_rt = 0;
               break;
@@ -1053,7 +1077,7 @@ int  main()
           strcpy(EX_inst,"ADDI");
           int tmp1 = MUX_ID_EX_rs;
           ID_EX[rt_pipel[2]] = MUX_ID_EX_rs + (int)immediate_pipel[2];
-          if((tmp1>=0&&immediate_pipel[2]>=0&&ID_EX[rt_pipel[2]]<0)||(tmp1<0&&immediate_pipel[2]&&ID_EX[rt_pipel[2]]>=0))
+          if((tmp1>0&&immediate_pipel[2]>0&&ID_EX[rt_pipel[2]]<0)||(tmp1<0&&immediate_pipel[2]<0&&ID_EX[rt_pipel[2]]>=0))
             overflow = 1;
           to_be_fwd_EX_rt = 0;
           m_to_be_fwd_EX_rt = 0;
@@ -1132,8 +1156,6 @@ int  main()
         case 0x2B:
         {//sw
           strcpy(EX_inst,"SW");
-          to_be_fwd_EX_rt = 0;
-          m_to_be_fwd_EX_rt = 0;
           int index = MUX_ID_EX_rs + (int)immediate_pipel[2];
           if((MUX_ID_EX_rs>0&&immediate_pipel[2]>0&&index<=0)||(MUX_ID_EX_rs<0&&immediate_pipel[2]<0&&index>=0))
             overflow = 1;
@@ -1143,8 +1165,6 @@ int  main()
         case 0x29:
         {//sh
           strcpy(EX_inst,"SH");
-          to_be_fwd_EX_rt = 0;
-          m_to_be_fwd_EX_rt = 0;
           int index = MUX_ID_EX_rs + (int)immediate_pipel[2];
           if((MUX_ID_EX_rs>0&&immediate_pipel[2]>0&&index<=0)||(MUX_ID_EX_rs<0&&immediate_pipel[2]<0&&index>=0))
             overflow = 1;
@@ -1154,8 +1174,6 @@ int  main()
         case 0x28:
         {//sb
           strcpy(EX_inst,"SB");
-          to_be_fwd_EX_rt = 0;
-          m_to_be_fwd_EX_rt = 0;
           int index = MUX_ID_EX_rs + (int)immediate_pipel[2];
           if((MUX_ID_EX_rs>0&&immediate_pipel[2]>0&&index<=0)||(MUX_ID_EX_rs<0&&immediate_pipel[2]<0&&index>=0))
             overflow = 1;
@@ -1252,6 +1270,7 @@ int  main()
           m_to_be_fwd_EX_rt = 0;
           to_be_fwd_EX_rs = 0;
           m_to_be_fwd_EX_rs = 0;
+          computing_instruction = 2;
           strcpy(EX_inst,"JAL");
           break;
         }
@@ -1329,63 +1348,63 @@ int  main()
           switch (funct_pipel[1]) {
             case 0x20: //add
             {
-              if(EX_inst[0]=='L'&& (rs_pipel[1]==rt_pipel[2]||rt_pipel[1]==rt_pipel[2]))
+              if(EX_inst[0]=='L'&&  EX_inst[1]!='U' && rt_pipel[2]!=0 && (rs_pipel[1]==rt_pipel[2]||rt_pipel[1]==rt_pipel[2]))
                 stall_ID = 1;
               strcpy(ID_inst,"ADD");
               break;
             }
             case 0x21: //addu
             {
-              if(EX_inst[0]=='L'&& (rs_pipel[1]==rt_pipel[2]||rt_pipel[1]==rt_pipel[2]))
+              if(EX_inst[0]=='L'&&  EX_inst[1]!='U' &&  rt_pipel[2]!=0 &&  (rs_pipel[1]==rt_pipel[2]||rt_pipel[1]==rt_pipel[2]))
                 stall_ID = 1;
               strcpy(ID_inst,"ADDU");
               break;
             }
             case 0x22: //sub
             {
-              if(EX_inst[0]=='L'&& (rs_pipel[1]==rt_pipel[2]||rt_pipel[1]==rt_pipel[2]))
+              if(EX_inst[0]=='L'&&  EX_inst[1]!='U' &&  rt_pipel[2]!=0 &&  (rs_pipel[1]==rt_pipel[2]||rt_pipel[1]==rt_pipel[2]))
                 stall_ID = 1;
               strcpy(ID_inst,"SUB");
               break;
             }
             case 0x24: //and
             {
-              if(EX_inst[0]=='L'&& (rs_pipel[1]==rt_pipel[2]||rt_pipel[1]==rt_pipel[2]))
+              if(EX_inst[0]=='L'&&  EX_inst[1]!='U' &&  rt_pipel[2]!=0 &&  (rs_pipel[1]==rt_pipel[2]||rt_pipel[1]==rt_pipel[2]))
                 stall_ID = 1;
               strcpy(ID_inst,"AND");
               break;
             }
             case 0x25: //or
             {
-              if(EX_inst[0]=='L'&& (rs_pipel[1]==rt_pipel[2]||rt_pipel[1]==rt_pipel[2]))
+              if(EX_inst[0]=='L'&&  EX_inst[1]!='U' &&  rt_pipel[2]!=0 &&  (rs_pipel[1]==rt_pipel[2]||rt_pipel[1]==rt_pipel[2]))
                 stall_ID = 1;
               strcpy(ID_inst,"OR");
               break;
             }
             case 0x26: //xor
             {
-              if(EX_inst[0]=='L'&& (rs_pipel[1]==rt_pipel[2]||rt_pipel[1]==rt_pipel[2]))
+              if(EX_inst[0]=='L'&&  EX_inst[1]!='U' &&  rt_pipel[2]!=0 &&  (rs_pipel[1]==rt_pipel[2]||rt_pipel[1]==rt_pipel[2]))
                 stall_ID = 1;
               strcpy(ID_inst,"XOR");
               break;
             }
             case 0x27: //nor
             {
-              if(EX_inst[0]=='L'&& (rs_pipel[1]==rt_pipel[2]||rt_pipel[1]==rt_pipel[2]))
+              if(EX_inst[0]=='L'&&  EX_inst[1]!='U' &&  rt_pipel[2]!=0 &&  (rs_pipel[1]==rt_pipel[2]||rt_pipel[1]==rt_pipel[2]))
                 stall_ID = 1;
               strcpy(ID_inst,"NOR");
               break;
             }
             case 0x28: //nand
             {
-              if(EX_inst[0]=='L'&& (rs_pipel[1]==rt_pipel[2]||rt_pipel[1]==rt_pipel[2]))
+              if(EX_inst[0]=='L'&&  EX_inst[1]!='U' &&  rt_pipel[2]!=0 &&  (rs_pipel[1]==rt_pipel[2]||rt_pipel[1]==rt_pipel[2]))
                 stall_ID = 1;
               strcpy(ID_inst,"NAND");
               break;
             }
             case 0x2A: //slt
             {
-              if(EX_inst[0]=='L'&& (rs_pipel[1]==rt_pipel[2]||rt_pipel[1]==rt_pipel[2]))
+              if(EX_inst[0]=='L'&&  EX_inst[1]!='U' &&  rt_pipel[2]!=0 &&  (rs_pipel[1]==rt_pipel[2]||rt_pipel[1]==rt_pipel[2]))
                 stall_ID = 1;
               strcpy(ID_inst,"SLT");
               break;
@@ -1397,14 +1416,14 @@ int  main()
             }
             case 0x02: //srl
             {
-              if(EX_inst[0]=='L'&& (rt_pipel[1]==rt_pipel[2]))
+              if(EX_inst[0]=='L'&&  EX_inst[1]!='U' &&  rt_pipel[2]!=0 &&  (rt_pipel[1]==rt_pipel[2]))
                 stall_ID = 1;
               strcpy(ID_inst,"SRL");
               break;
             }
             case 0x03: //sra
             {
-              if(EX_inst[0]=='L'&& (rt_pipel[1]==rt_pipel[2]))
+              if(EX_inst[0]=='L'&&  EX_inst[1]!='U' &&  rt_pipel[2]!=0 &&  (rt_pipel[1]==rt_pipel[2]))
                 stall_ID = 1;
               strcpy(ID_inst,"SRA");
               break;
@@ -1412,8 +1431,8 @@ int  main()
             case 0x08: //jr ******************
             {
               strcpy(ID_inst,"JR");
-              if((EX_inst[0]=='L'&&(rs_pipel[1]==rt_pipel[2]))||
-                 (DM_inst[0]=='L'&&(rs_pipel[1]==rt_pipel[3])))
+              if((EX_inst[0]=='L'&&  EX_inst[1]!='U' &&  rt_pipel[2]!=0 && (rs_pipel[1]==rt_pipel[2]))||
+                 (DM_inst[0]=='L'&&  DM_inst[1]!='U' &&  rt_pipel[2]!=0 && (rs_pipel[1]==rt_pipel[3])))
                  stall_ID = 1;
               if((computing_instruction==1&&rs_pipel[1]==rd_pipel[2])||
                  (computing_instruction==2&&rs_pipel[1]==rt_pipel[2]))
@@ -1422,6 +1441,13 @@ int  main()
               {
                 J_Type = 1;
               }
+              if(strcmp(DM_inst,"JAL")==0&&rs_pipel[1]==31)
+              {
+                to_be_fwd_ID_rs = 31;
+                pc_adjust = EX_DM[to_be_fwd_ID_rs];
+                _flush = 1;
+                break;
+              }
               if(!stall_ID&&rs_pipel[1]==rd_pipel[3]&&computing_instruction_in_DM==1)
               {
                 to_be_fwd_ID_rs = rs_pipel[1];
@@ -1429,6 +1455,7 @@ int  main()
                 _flush = 1;
                 break;
               }
+              //printf("%d %d %d\n", rs_pipel[1],rt_pipel[3],computing_instruction_in_DM);
               if(!stall_ID&&rs_pipel[1]==rt_pipel[3]&&computing_instruction_in_DM==2)
               {
                 to_be_fwd_ID_rs = rs_pipel[1];
@@ -1445,14 +1472,14 @@ int  main()
             }
             case 0x18: //mult
             {
-              if(EX_inst[0]=='L'&& (rs_pipel[1]==rt_pipel[2]||rt_pipel[1]==rt_pipel[2]))
+              if(EX_inst[0]=='L'&&  EX_inst[1]!='U' &&   rt_pipel[2]!=0 && (rs_pipel[1]==rt_pipel[2]||rt_pipel[1]==rt_pipel[2]))
                 stall_ID = 1;
               strcpy(ID_inst,"MULT");
               break;
             }
             case 0x19: //multu
             {
-              if(EX_inst[0]=='L'&& (rs_pipel[1]==rt_pipel[2]||rt_pipel[1]==rt_pipel[2]))
+              if(EX_inst[0]=='L'&&  EX_inst[1]!='U' &&   rt_pipel[2]!=0 && (rs_pipel[1]==rt_pipel[2]||rt_pipel[1]==rt_pipel[2]))
                 stall_ID = 1;
               strcpy(ID_inst,"MULTU");
               break;
@@ -1473,70 +1500,70 @@ int  main()
         //I-type
         case 0x08://addi
         {
-          if(EX_inst[0]=='L'&& (rs_pipel[1]==rt_pipel[2]))
+          if(EX_inst[0]=='L' && EX_inst[1]!='U' && rt_pipel[2]!=0 && (rs_pipel[1]==rt_pipel[2]))
             stall_ID = 1;
           strcpy(ID_inst,"ADDI");
           break;
         }
         case 0x09://addiu
         {
-          if(EX_inst[0]=='L'&& (rs_pipel[1]==rt_pipel[2]))
+          if(EX_inst[0]=='L' && EX_inst[1]!='U' && rt_pipel[2]!=0 && (rs_pipel[1]==rt_pipel[2]))
             stall_ID = 1;
           strcpy(ID_inst,"ADDIU");
           break;
         }
         case 0x23://lw
         {
-          if(EX_inst[0]=='L'&& rs_pipel[1]==rt_pipel[2])
+          if(EX_inst[0]=='L' && EX_inst[1]!='U' && rt_pipel[2]!=0 && rs_pipel[1]==rt_pipel[2])
             stall_ID = 1;
           strcpy(ID_inst,"LW");
           break;
         }
         case 0x21://lh
         {
-          if(EX_inst[0]=='L'&& rs_pipel[1]==rt_pipel[2])
+          if(EX_inst[0]=='L' && EX_inst[1]!='U' && rt_pipel[2]!=0 && rs_pipel[1]==rt_pipel[2])
             stall_ID = 1;
           strcpy(ID_inst,"LH");
           break;
         }
         case 0x25://lhu
         {
-          if(EX_inst[0]=='L'&& rs_pipel[1]==rt_pipel[2])
+          if(EX_inst[0]=='L' && EX_inst[1]!='U' && rt_pipel[2]!=0 && rs_pipel[1]==rt_pipel[2])
             stall_ID = 1;
           strcpy(ID_inst,"LHU");
           break;
         }
         case 0x20://lb
         {
-          if(EX_inst[0]=='L'&& rs_pipel[1]==rt_pipel[2])
+          if(EX_inst[0]=='L' && EX_inst[1]!='U' && rt_pipel[2]!=0 && rs_pipel[1]==rt_pipel[2])
             stall_ID = 1;
           strcpy(ID_inst,"LB");
           break;
         }
         case 0x24://lbu
         {
-          if(EX_inst[0]=='L'&& rs_pipel[1]==rt_pipel[2])
+          if(EX_inst[0]=='L' && EX_inst[1]!='U' && rt_pipel[2]!=0 && rs_pipel[1]==rt_pipel[2])
             stall_ID = 1;
           strcpy(ID_inst,"LBU");
           break;
         }
         case 0x2B://sw
         {
-          if(EX_inst[0]=='L'&& (rs_pipel[1]==rt_pipel[2]||rt_pipel[1]==rt_pipel[2]))
+          if(EX_inst[0]=='L' && EX_inst[1]!='U' && rt_pipel[2]!=0 && (rs_pipel[1]==rt_pipel[2]||rt_pipel[1]==rt_pipel[2]))
             stall_ID = 1;
           strcpy(ID_inst,"SW");
           break;
         }
         case 0x29://sh
         {
-          if(EX_inst[0]=='L'&& (rs_pipel[1]==rt_pipel[2]||rt_pipel[1]==rt_pipel[2]))
+          if(EX_inst[0]=='L' && EX_inst[1]!='U' && rt_pipel[2]!=0 && (rs_pipel[1]==rt_pipel[2]||rt_pipel[1]==rt_pipel[2]))
             stall_ID = 1;
           strcpy(ID_inst,"SH");
           break;
         }
         case 0x28://sb
         {
-          if(EX_inst[0]=='L'&& (rs_pipel[1]==rt_pipel[2]||rt_pipel[1]==rt_pipel[2]))
+          if(EX_inst[0]=='L' && EX_inst[1]!='U' && rt_pipel[2]!=0 && (rs_pipel[1]==rt_pipel[2]||rt_pipel[1]==rt_pipel[2]))
             stall_ID = 1;
           strcpy(ID_inst,"SB");
           break;
@@ -1548,28 +1575,28 @@ int  main()
         }
         case 0x0C://andi
         {
-          if(EX_inst[0]=='L'&& (rs_pipel[1]==rt_pipel[2]))
+          if(EX_inst[0]=='L' && EX_inst[1]!='U' && rt_pipel[2]!=0 && (rs_pipel[1]==rt_pipel[2]))
             stall_ID = 1;
           strcpy(ID_inst,"ANDI");
           break;
         }
         case 0x0D://ori
         {
-          if(EX_inst[0]=='L'&& (rs_pipel[1]==rt_pipel[2]))
+          if(EX_inst[0]=='L' && EX_inst[1]!='U' && rt_pipel[2]!=0 && (rs_pipel[1]==rt_pipel[2]))
             stall_ID = 1;
           strcpy(ID_inst,"ORI");
           break;
         }
         case 0x0E://nori
         {
-          if(EX_inst[0]=='L'&& (rs_pipel[1]==rt_pipel[2]))
+          if(EX_inst[0]=='L' && EX_inst[1]!='U' && rt_pipel[2]!=0 && (rs_pipel[1]==rt_pipel[2]))
             stall_ID = 1;
           strcpy(ID_inst,"NORI");
           break;
         }
         case 0x0A://slti
         {
-          if(EX_inst[0]=='L'&& (rs_pipel[1]==rt_pipel[2]))
+          if(EX_inst[0]=='L' && EX_inst[1]!='U' && rt_pipel[2]!=0 && (rs_pipel[1]==rt_pipel[2]))
             stall_ID = 1;
           strcpy(ID_inst,"SLTI");
           break;
@@ -1577,8 +1604,8 @@ int  main()
         //TODO using computing_instruction to DETECT stall
         case 0x04:
         {//beq
-          if((EX_inst[0]=='L'&&(rs_pipel[1]==rt_pipel[2]||rt_pipel[1]==rt_pipel[2]))||
-             (DM_inst[0]=='L'&&(rs_pipel[1]==rt_pipel[3]||rt_pipel[1]==rt_pipel[3])))
+          if((EX_inst[0]=='L' && EX_inst[1]!='U' && rt_pipel[2]!=0&&(rs_pipel[1]==rt_pipel[2]||rt_pipel[1]==rt_pipel[2]))||
+             (DM_inst[0]=='L' && DM_inst[1]!='U' &&(rs_pipel[1]==rt_pipel[3]||rt_pipel[1]==rt_pipel[3])))
              stall_ID = 1;
           if((computing_instruction==1&&rs_pipel[1]==rd_pipel[2])||(computing_instruction==1&&rt_pipel[1]==rd_pipel[2])||
              (computing_instruction==2&&rs_pipel[1]==rt_pipel[2])||(computing_instruction==2&&rt_pipel[1]==rt_pipel[2]))
@@ -1646,8 +1673,8 @@ int  main()
         }
         case 0x05:
         {//bne
-          if((EX_inst[0]=='L'&&(rs_pipel[1]==rt_pipel[2]||rt_pipel[1]==rt_pipel[2]))||
-             (DM_inst[0]=='L'&&(rs_pipel[1]==rt_pipel[3]||rt_pipel[1]==rt_pipel[3])))
+          if((EX_inst[0]=='L' && EX_inst[1]!='U' && rt_pipel[2]!=0&&(rs_pipel[1]==rt_pipel[2]||rt_pipel[1]==rt_pipel[2]))||
+             (DM_inst[0]=='L' && DM_inst[1]!='U' &&(rs_pipel[1]==rt_pipel[3]||rt_pipel[1]==rt_pipel[3])))
              stall_ID = 1;
          if((computing_instruction==1&&rs_pipel[1]==rd_pipel[2])||(computing_instruction==1&&rt_pipel[1]==rd_pipel[2])||
             (computing_instruction==2&&rs_pipel[1]==rt_pipel[2])||(computing_instruction==2&&rt_pipel[1]==rt_pipel[2]))
@@ -1714,8 +1741,8 @@ int  main()
         }
         case 0x07:
         {//bgtz
-          if((EX_inst[0]=='L'&&(rs_pipel[1]==rt_pipel[2]))||
-             (DM_inst[0]=='L'&&(rs_pipel[1]==rt_pipel[3])))
+          if((EX_inst[0]=='L' && EX_inst[1]!='U' && rt_pipel[2]!=0&&(rs_pipel[1]==rt_pipel[2]))||
+             (DM_inst[0]=='L' && DM_inst[1]!='U' &&(rs_pipel[1]==rt_pipel[3])))
              stall_ID = 1;
              if((computing_instruction==1&&rs_pipel[1]==rd_pipel[2])||
                 (computing_instruction==2&&rs_pipel[1]==rt_pipel[2]))
