@@ -1437,6 +1437,8 @@ int  main()
                 strcpy(ID_inst,"NOP");
                 break;
               }
+              if(EX_inst[0]=='L'&&  EX_inst[1]!='U' &&  rt_pipel[2]!=0 &&  (rs_pipel[1]==rt_pipel[2]||rt_pipel[1]==rt_pipel[2]))
+                stall_ID = 1;
               strcpy(ID_inst,"SLL");
               break;
             }
