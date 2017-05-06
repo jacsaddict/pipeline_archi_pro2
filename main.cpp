@@ -225,6 +225,11 @@ int  main()
             case 0x00:
             {//sll
               strcpy(WB_inst,"SLL");
+              if(opcode_pipel[4]==0&&rt_pipel[4]==0&&rd_pipel[4]==0&&immediate_pipel[4]==0)
+              {
+                strcpy(WB_inst,"NOP");
+                break;
+              }
               reg[rd_pipel[4]] = DM_WB[rd_pipel[4]];
               if(rd_pipel[4]==0)
               {
@@ -536,6 +541,11 @@ int  main()
               }
               case 0x00:
               {//sll
+                if(opcode_pipel[3]==0&&rt_pipel[3]==0&&rd_pipel[3]==0&&immediate_pipel[3]==0)
+                {
+                  strcpy(DM_inst,"NOP");
+                  break;
+                }
                 strcpy(DM_inst,"SLL");
                 break;
               }
@@ -651,6 +661,7 @@ int  main()
           {//lb
             strcpy(DM_inst,"LB");
             int m_halt = 0;
+            printf("%c\n", _dimage[EX_DM_M_index]);
             if(EX_DM_M_index>=1024||EX_DM_M_index<0)
             {
               memory_address_overflow = 1;
@@ -693,10 +704,10 @@ int  main()
             }
             if(!m_halt)
             {
-              _dimage[EX_DM_M_index]   = DM_WB[rt_pipel[3]]>>24;
-              _dimage[EX_DM_M_index+1] = DM_WB[rt_pipel[3]]>>16;
-              _dimage[EX_DM_M_index+2] = DM_WB[rt_pipel[3]]>>8;
-              _dimage[EX_DM_M_index+3] = DM_WB[rt_pipel[3]];
+              _dimage[EX_DM_M_index]   = EX_DM[rt_pipel[3]]>>24;
+              _dimage[EX_DM_M_index+1] = EX_DM[rt_pipel[3]]>>16;
+              _dimage[EX_DM_M_index+2] = EX_DM[rt_pipel[3]]>>8;
+              _dimage[EX_DM_M_index+3] = EX_DM[rt_pipel[3]];
             }
             break;
           }
@@ -716,8 +727,8 @@ int  main()
             }
             if(!m_halt)
             {
-              _dimage[EX_DM_M_index]   = DM_WB[rt_pipel[3]]>>8;
-              _dimage[EX_DM_M_index+1] = DM_WB[rt_pipel[3]];
+              _dimage[EX_DM_M_index]   = EX_DM[rt_pipel[3]]>>8;
+              _dimage[EX_DM_M_index+1] = EX_DM[rt_pipel[3]];
             }
             break;
           }
@@ -732,7 +743,7 @@ int  main()
             }
             if(!m_halt)
             {
-              _dimage[EX_DM_M_index] = DM_WB[rt_pipel[3]];
+              _dimage[EX_DM_M_index] = EX_DM[rt_pipel[3]];
             }
             break;
           }
@@ -922,7 +933,8 @@ int  main()
               int tmp1 = MUX_ID_EX_rs;
               int tmp2 = -MUX_ID_EX_rt;
               ID_EX[rd_pipel[2]] = MUX_ID_EX_rs - MUX_ID_EX_rt;
-
+              if(cycle==255)
+                printf("%d %d\n",MUX_ID_EX_rs,MUX_ID_EX_rt );
               if((tmp1>0&&tmp2>0&&ID_EX[rd_pipel[2]]<0)||(tmp1<0&&tmp2<0&&ID_EX[rd_pipel[2]]>=0))
                 overflow = 1;
               computing_instruction = 1;
@@ -978,10 +990,17 @@ int  main()
             }
             case 0x00:
             {//sll TODO change!!
-              strcpy(EX_inst,"SLL");
-              ID_EX[rd_pipel[2]] = MUX_ID_EX_rt<<shamt_pipel[2];
               to_be_fwd_EX_rs = 0;
               m_to_be_fwd_EX_rs = 0;
+              if(opcode_pipel[2]==0&&rt_pipel[2]==0&&rd_pipel[2]==0&&immediate_pipel[2]==0)
+              {
+                to_be_fwd_EX_rt = 0;
+                m_to_be_fwd_EX_rt = 0;
+                strcpy(EX_inst,"NOP");
+                break;
+              }
+              strcpy(EX_inst,"SLL");
+              ID_EX[rd_pipel[2]] = MUX_ID_EX_rt<<shamt_pipel[2];
               computing_instruction = 1;
               break;
             }
@@ -1223,7 +1242,7 @@ int  main()
           strcpy(EX_inst,"SLTI");
           to_be_fwd_EX_rt = 0;
           m_to_be_fwd_EX_rt = 0;
-          ID_EX[rt_pipel[2]] = (MUX_ID_EX_rs<unsigned_immediate_pipel[2]);
+          ID_EX[rt_pipel[2]] = (MUX_ID_EX_rs<immediate_pipel[2]);
           computing_instruction = 2;
           break;
         }
@@ -1411,6 +1430,11 @@ int  main()
             }
             case 0x00: //sll
             {//TODO change
+              if(opcode_pipel[1]==0&&rt_pipel[1]==0&&rd_pipel[1]==0&&immediate_pipel[1]==0)
+              {
+                strcpy(ID_inst,"NOP");
+                break;
+              }
               strcpy(ID_inst,"SLL");
               break;
             }
@@ -1432,10 +1456,10 @@ int  main()
             {
               strcpy(ID_inst,"JR");
               if((EX_inst[0]=='L'&&  EX_inst[1]!='U' &&  rt_pipel[2]!=0 && (rs_pipel[1]==rt_pipel[2]))||
-                 (DM_inst[0]=='L'&&  DM_inst[1]!='U' &&  rt_pipel[2]!=0 && (rs_pipel[1]==rt_pipel[3])))
+                 (DM_inst[0]=='L'&&  DM_inst[1]!='U' &&  rt_pipel[3]!=0 && (rs_pipel[1]==rt_pipel[3])))
                  stall_ID = 1;
-              if((computing_instruction==1&&rs_pipel[1]==rd_pipel[2])||
-                 (computing_instruction==2&&rs_pipel[1]==rt_pipel[2]))
+              if((computing_instruction==1&&  rd_pipel[2]!=0 &&rs_pipel[1]==rd_pipel[2])||
+                 (computing_instruction==2&&  rt_pipel[2]!=0 &&rs_pipel[1]==rt_pipel[2]))
                 stall_ID = 1;
               if(!stall_ID)
               {
@@ -1607,10 +1631,40 @@ int  main()
           if((EX_inst[0]=='L' && EX_inst[1]!='U' && rt_pipel[2]!=0&&(rs_pipel[1]==rt_pipel[2]||rt_pipel[1]==rt_pipel[2]))||
              (DM_inst[0]=='L' && DM_inst[1]!='U' &&(rs_pipel[1]==rt_pipel[3]||rt_pipel[1]==rt_pipel[3])))
              stall_ID = 1;
-          if((computing_instruction==1&&rs_pipel[1]==rd_pipel[2])||(computing_instruction==1&&rt_pipel[1]==rd_pipel[2])||
-             (computing_instruction==2&&rs_pipel[1]==rt_pipel[2])||(computing_instruction==2&&rt_pipel[1]==rt_pipel[2]))
+          if((computing_instruction==1&&  rd_pipel[2]!=0 &&rs_pipel[1]==rd_pipel[2])||(computing_instruction==1&&  rd_pipel[2]!=0 &&rt_pipel[1]==rd_pipel[2])||
+             (computing_instruction==2&&  rt_pipel[2]!=0 &&rs_pipel[1]==rt_pipel[2])||(computing_instruction==2&&  rt_pipel[2]!=0 &&rt_pipel[1]==rt_pipel[2]))
             stall_ID = 1;
           strcpy(ID_inst,"BEQ");
+
+          if(strcmp(DM_inst,"JAL")==0&&(rs_pipel[1]==31&&rt_pipel[1]==31))
+          {
+            to_be_fwd_ID_rs = rs_pipel[1];
+            to_be_fwd_ID_rt = rt_pipel[1];
+            pc_adjust = 4*immediate_pipel[1];
+            _flush = 1;
+            break;
+            //sure to be eq
+          }
+          if(strcmp(DM_inst,"JAL")==0&&(rs_pipel[1]==31))
+          {
+            to_be_fwd_ID_rs = rs_pipel[1];
+            if(EX_DM[31]==reg[rt_pipel[1]])
+            {
+              pc_adjust = 4*immediate_pipel[1];
+              _flush = 1;
+              break;
+            }
+          }
+          if(strcmp(DM_inst,"JAL")==0&&(rt_pipel[1]==31))
+          {
+            to_be_fwd_ID_rt = rt_pipel[1];
+            if(EX_DM[31]==reg[rs_pipel[1]])
+            {
+              pc_adjust = 4*immediate_pipel[1];
+              _flush = 1;
+              break;
+            }
+          }
           if(!stall_ID&&((computing_instruction_in_DM==1&&rs_pipel[1]==rd_pipel[3]&&rt_pipel[1]==rd_pipel[3])||
                          (computing_instruction_in_DM==2&&rs_pipel[1]==rt_pipel[3]&&rt_pipel[1]==rt_pipel[3])))
           {
@@ -1676,8 +1730,8 @@ int  main()
           if((EX_inst[0]=='L' && EX_inst[1]!='U' && rt_pipel[2]!=0&&(rs_pipel[1]==rt_pipel[2]||rt_pipel[1]==rt_pipel[2]))||
              (DM_inst[0]=='L' && DM_inst[1]!='U' &&(rs_pipel[1]==rt_pipel[3]||rt_pipel[1]==rt_pipel[3])))
              stall_ID = 1;
-         if((computing_instruction==1&&rs_pipel[1]==rd_pipel[2])||(computing_instruction==1&&rt_pipel[1]==rd_pipel[2])||
-            (computing_instruction==2&&rs_pipel[1]==rt_pipel[2])||(computing_instruction==2&&rt_pipel[1]==rt_pipel[2]))
+         if((computing_instruction==1&&  rd_pipel[2]!=0 &&rs_pipel[1]==rd_pipel[2])||(computing_instruction==1&&  rd_pipel[2]!=0 &&rt_pipel[1]==rd_pipel[2])||
+            (computing_instruction==2&&  rt_pipel[2]!=0 &&rs_pipel[1]==rt_pipel[2])||(computing_instruction==2&&  rt_pipel[2]!=0 &&rt_pipel[1]==rt_pipel[2]))
              stall_ID = 1;
           strcpy(ID_inst,"BNE");
           if(!stall_ID&&((computing_instruction_in_DM==1&&rs_pipel[1]==rd_pipel[3]&&rt_pipel[1]==rd_pipel[3])||
@@ -1744,8 +1798,8 @@ int  main()
           if((EX_inst[0]=='L' && EX_inst[1]!='U' && rt_pipel[2]!=0&&(rs_pipel[1]==rt_pipel[2]))||
              (DM_inst[0]=='L' && DM_inst[1]!='U' &&(rs_pipel[1]==rt_pipel[3])))
              stall_ID = 1;
-             if((computing_instruction==1&&rs_pipel[1]==rd_pipel[2])||
-                (computing_instruction==2&&rs_pipel[1]==rt_pipel[2]))
+             if((computing_instruction==1&&  rd_pipel[2]!=0 &&rs_pipel[1]==rd_pipel[2])||
+                (computing_instruction==2&&  rt_pipel[2]!=0 &&rs_pipel[1]==rt_pipel[2]))
              stall_ID = 1;
           strcpy(ID_inst,"BGTZ");
           if(!stall_ID&&((computing_instruction_in_DM==1&&rs_pipel[1]==rd_pipel[3])||
@@ -1761,6 +1815,8 @@ int  main()
             }
             if(EX_DM[to_be_fwd_ID_rs]>0)
             {
+              //printf("hello\n" );
+              if(to_be_fwd_ID_rs==0) break;
               pc_adjust = 4*immediate_pipel[1];
               _flush =  1;
             }
@@ -1771,7 +1827,7 @@ int  main()
             //detect_overflow
             if((immediate_pipel[1]>0&&4*immediate_pipel[1]<=0)||(immediate_pipel[1]<0&&4*immediate_pipel[1]>=0))
               overflow = 1;
-            pc_adjust = 4*immediate;
+            pc_adjust = 4*immediate_pipel[1];
             _flush = 1;
           }
           break;
@@ -2022,3 +2078,4 @@ unsigned int instruction_decode(unsigned char a1,unsigned char a2,unsigned char 
 }
 //TODO lw........change from DM_WB_M to $t
 //TODO using temp registers to store the result value to avoid coflict;
+//TODO SLL - NOP checking

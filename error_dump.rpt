@@ -9,5 +9,6 @@ In cycle 135: Write $0 Error
 In cycle 135: Overwrite HI-LO registers
 In cycle 170: Write $0 Error
 In cycle 172: Write $0 Error
+In cycle 173: Write $0 Error
 In cycle 173: Address Overflow
 In cycle 173: Misalignment Error
