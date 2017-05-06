@@ -225,7 +225,7 @@ int  main()
             case 0x00:
             {//sll
               strcpy(WB_inst,"SLL");
-              if(opcode_pipel[4]==0&&rt_pipel[4]==0&&rd_pipel[4]==0&&immediate_pipel[4]==0)
+              if(opcode_pipel[4]==0&&rt_pipel[4]==0&&rd_pipel[4]==0&&shamt_pipel[4]==0)
               {
                 strcpy(WB_inst,"NOP");
                 break;
@@ -541,7 +541,7 @@ int  main()
               }
               case 0x00:
               {//sll
-                if(opcode_pipel[3]==0&&rt_pipel[3]==0&&rd_pipel[3]==0&&immediate_pipel[3]==0)
+                if(opcode_pipel[3]==0&&rt_pipel[3]==0&&rd_pipel[3]==0&&shamt_pipel[3]==0)
                 {
                   strcpy(DM_inst,"NOP");
                   break;
@@ -641,6 +641,7 @@ int  main()
           {//lhu
             strcpy(DM_inst,"LHU");
             int m_halt = 0;
+
             if(EX_DM_M_index>=1023||EX_DM_M_index<0)
             {
               memory_address_overflow = 1;
@@ -661,7 +662,7 @@ int  main()
           {//lb
             strcpy(DM_inst,"LB");
             int m_halt = 0;
-            printf("%c\n", _dimage[EX_DM_M_index]);
+            //printf("%c\n", _dimage[EX_DM_M_index]);
             if(EX_DM_M_index>=1024||EX_DM_M_index<0)
             {
               memory_address_overflow = 1;
@@ -933,8 +934,6 @@ int  main()
               int tmp1 = MUX_ID_EX_rs;
               int tmp2 = -MUX_ID_EX_rt;
               ID_EX[rd_pipel[2]] = MUX_ID_EX_rs - MUX_ID_EX_rt;
-              if(cycle==255)
-                printf("%d %d\n",MUX_ID_EX_rs,MUX_ID_EX_rt );
               if((tmp1>0&&tmp2>0&&ID_EX[rd_pipel[2]]<0)||(tmp1<0&&tmp2<0&&ID_EX[rd_pipel[2]]>=0))
                 overflow = 1;
               computing_instruction = 1;
@@ -992,7 +991,7 @@ int  main()
             {//sll TODO change!!
               to_be_fwd_EX_rs = 0;
               m_to_be_fwd_EX_rs = 0;
-              if(opcode_pipel[2]==0&&rt_pipel[2]==0&&rd_pipel[2]==0&&immediate_pipel[2]==0)
+              if(opcode_pipel[2]==0&&rt_pipel[2]==0&&rd_pipel[2]==0&&shamt_pipel[2]==0)
               {
                 to_be_fwd_EX_rt = 0;
                 m_to_be_fwd_EX_rt = 0;
@@ -1176,6 +1175,7 @@ int  main()
         {//sw
           strcpy(EX_inst,"SW");
           int index = MUX_ID_EX_rs + (int)immediate_pipel[2];
+          ID_EX[rt_pipel[2]] = MUX_ID_EX_rt;
           if((MUX_ID_EX_rs>0&&immediate_pipel[2]>0&&index<=0)||(MUX_ID_EX_rs<0&&immediate_pipel[2]<0&&index>=0))
             overflow = 1;
           EX_DM_M_index = index;
@@ -1185,6 +1185,7 @@ int  main()
         {//sh
           strcpy(EX_inst,"SH");
           int index = MUX_ID_EX_rs + (int)immediate_pipel[2];
+          ID_EX[rt_pipel[2]] = MUX_ID_EX_rt;
           if((MUX_ID_EX_rs>0&&immediate_pipel[2]>0&&index<=0)||(MUX_ID_EX_rs<0&&immediate_pipel[2]<0&&index>=0))
             overflow = 1;
           EX_DM_M_index = index;
@@ -1194,6 +1195,7 @@ int  main()
         {//sb
           strcpy(EX_inst,"SB");
           int index = MUX_ID_EX_rs + (int)immediate_pipel[2];
+          ID_EX[rt_pipel[2]] = MUX_ID_EX_rt;
           if((MUX_ID_EX_rs>0&&immediate_pipel[2]>0&&index<=0)||(MUX_ID_EX_rs<0&&immediate_pipel[2]<0&&index>=0))
             overflow = 1;
           EX_DM_M_index = index;
@@ -1430,7 +1432,7 @@ int  main()
             }
             case 0x00: //sll
             {//TODO change
-              if(opcode_pipel[1]==0&&rt_pipel[1]==0&&rd_pipel[1]==0&&immediate_pipel[1]==0)
+              if(opcode_pipel[1]==0&&rt_pipel[1]==0&&rd_pipel[1]==0&&shamt_pipel[1]==0)
               {
                 strcpy(ID_inst,"NOP");
                 break;
@@ -2042,11 +2044,6 @@ int  main()
       fprintf( error , "In cycle %d: Write $0 Error\n", cycle);
       write_0 = 0;
     }
-    if(overwrite_hi_lo)
-    {
-      fprintf(error , "In cycle %d: Overwrite HI-LO registers\n", cycle);
-      overwrite_hi_lo = 0;
-    }
     if(memory_address_overflow)
     {
       fprintf(error , "In cycle %d: Address Overflow\n", cycle);
@@ -2056,6 +2053,11 @@ int  main()
     {
       fprintf(error , "In cycle %d: Misalignment Error\n", cycle);
       flag = 1;
+    }
+    if(overwrite_hi_lo)
+    {
+      fprintf(error , "In cycle %d: Overwrite HI-LO registers\n", cycle);
+      overwrite_hi_lo = 0;
     }
     if (overflow) {
       fprintf( error , "In cycle %d: Number Overflow\n", cycle);
